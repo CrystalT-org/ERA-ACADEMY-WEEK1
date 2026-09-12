@@ -69,7 +69,7 @@ app.post("/users", (req,res) => {
             res.status(201).json({
                 message: "user created successfully",
                 userId: "result.insertId",
-                student_id: "student_id"
+                student_id: student_id
             });
         });
     });
@@ -81,6 +81,42 @@ app.get("/users", (req,res) => {
     db.query(sql,(error, results) => {
         if(error) return res.status(500).json({error: "failed to get users"});
         res.json(results);
+    });
+});
+
+// POST /login -- checks email and password against users table
+app.post("/login", (req,res) => {
+    const {email, password} = req.body;
+    if(!email || !password) {
+        return res.status(400).json({error: "email & password are required"});
+    }
+    if(password.length < 8) {
+        return res.status(400).json({error: "password must be atleast 8 characters long"});
+    }
+    const specialChar = /[!@#$%]/;
+    if(!specialChar.test(password)) {
+        return res.status(400).json({error: "password must include atleast 1 special character: ! @ # $ %"});
+    }
+    const sql = "SELECT * FROM users WHERE email = ?";
+    db.query(sql, [email],(error, results) => {
+        if(error) {
+            console.error("login query error:", error);
+            return res.status(500).json({error: "something went wrong"});
+        }
+        if(results.length === 0) {
+            return res.status(401).json({error: "invalid email or password"});
+        }
+        const user = results[0];
+        if(user.password !== password) {
+            return res.status(401).json({error: "invalid email or password"});
+        }
+        // Step 5: login successful -- Return name so frontend can update the navbar
+        res.status(200).json({
+            message: "login successful",
+            first_name: user.first_name,
+            last_name: user.last_name,
+            student_id: user.student_id
+        });
     });
 });
 
